@@ -1,42 +1,37 @@
 ////////////////// Imports //////////////////
 
+require('dotenv').config()
 const express = require("express");
 const body = require("body-parser");
-const firebase = require("firebase-admin");
+const admin = require("firebase-admin");
+var serviceAccount = require("./firebase-admin-key.json");
+
+const timerRouter = require("./routes/timer.js");
 
 /////////////////////////////////////////////
 
 ////////////////// Configs //////////////////
 
-const firebaseConfig = {
-    apiKey: process.env.KEY,
-    authDomain: process.env.DOMAIN,
-    projectId: process.env.ID,
-    storageBucket: process.env.BUCKET,
-    messagingSenderId: process.env.SENDER,
-    appId: process.env.APPID,
-    measurementId: process.env.MEASUREMENT,
-    databaseURL: process.env.DBURL
-};
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: "https://postman-10943-default-rtdb.firebaseio.com"
+});
 
 const app = express();
 app.use(body.json());
-firebase.initializeApp(firebaseConfig);
 
 /////////////////////////////////////////////
 
 ///////////// Global Constants /////////////
 
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT
 
 /////////////////////////////////////////////
 
+app.use("/api/timer", timerRouter);
 
 app.listen(PORT, () => { console.log(`Server listening on port: ${PORT}`) });
 
 
-app.get("/", (req, res) => {
-    res.status(200).send("Hello World");
-})
 
 
