@@ -15,7 +15,8 @@ const firebaseConfig = {
     storageBucket: process.env.BUCKET,
     messagingSenderId: process.env.SENDER,
     appId: process.env.APPID,
-    measurementId: process.env.MEASUREMENT
+    measurementId: process.env.MEASUREMENT,
+    databaseURL: process.env.DBURL
 };
 
 const app = express();
