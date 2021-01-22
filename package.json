@@ -17,7 +17,9 @@
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "firebase-admin": "^9.4.2",
-    "node-schedule": "^1.3.2"
+    "node-schedule": "^1.3.2",
+    "nodemailer": "^6.4.17",
+    "uniqid": "^5.2.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.7"
