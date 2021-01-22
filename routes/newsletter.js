@@ -12,6 +12,7 @@ router.get('/check', (req, res) => {
 });
 
 router.post('/subscribe', ( req, res) => {
+    
 });
 
 
