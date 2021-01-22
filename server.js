@@ -7,6 +7,9 @@ const admin = require("firebase-admin");
 var serviceAccount = require("./firebase-admin-key.json");
 
 const timerRouter = require("./routes/timer.js");
+const newsRoute = require("./routes/newsletter");
+const dependRoute = require("./routes/dependancy");
+const { urlencoded } = require('body-parser');
 
 /////////////////////////////////////////////
 
@@ -19,6 +22,7 @@ admin.initializeApp({
 
 const app = express();
 app.use(body.json());
+app.use(body.urlencoded({extended: false}));
 
 /////////////////////////////////////////////
 
@@ -29,6 +33,8 @@ const PORT = process.env.PORT
 /////////////////////////////////////////////
 
 app.use("/api/timer", timerRouter);
+app.use("/api/depend", dependRoute);
+app.use("/api/news", newsRoute);
 
 app.listen(PORT, () => { console.log(`Server listening on port: ${PORT}`) });
 
