@@ -7,11 +7,6 @@ const uniqid = require("uniqid");
 
 //chechauth import
 const chechAuth = require('../middleware/checkauth');
-const { firestore } = require("firebase-admin");
-
-function convertTZ(date, tzString) {
-    return new Date((typeof date === "string" ? new Date(date) : date).toLocaleString("en-US", { timeZone: tzString }));
-}
 
 router.get("/", chechAuth, (req, res) => {
     let data = req.body;
@@ -82,17 +77,25 @@ router.post("/", chechAuth, (req, res) => {
                             error: "Invalid time provided, use the format: hh:mm"
                         })
                     } else {
-                        var date = new Date(Number(dates[2]), Number(dates[1]) - 1, Number(dates[0]), Number(time[1]), Number(time[0]), 0);
+                        var date = new Date(Number(dates[2]), Number(dates[1]) - 1, Number(dates[0]), Number(time[0]), Number(time[1]), 0);
                         if ((Date.parse(date) - Date.parse(new Date())) > 0) {
                             let job_id = uniqid();
                             global['job' + job_id] = schedule.scheduleJob(date, function () {
                                 console.log("job started");
-                                mailOptions.subject = data.pupose === undefined ? "Alert: A reminder has been triggered" : "Alert: " + data.purpose + " reminder has been triggered"
+                                mailOptions.subject = data.purpose === undefined ? "Alert: A reminder has been triggered" : "Alert: " + data.purpose + " reminder has been triggered"
                                 mailOptions.html = "<h2>Reminder!</h2>"
                                 transporter.sendMail(mailOptions).then((err, info) => {
                                     console.log("done!");
                                 })
                             });
+                            res.status(200).send({
+                                success: true,
+                                message: "Reminder Set",
+                                job_id: job_id,
+                                date: date,
+                                time: time,
+                                purpose: data.purpose || null
+                            })
                         } else {
                             res.status(500).send({
                                 success: false,
