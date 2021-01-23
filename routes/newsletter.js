@@ -9,138 +9,173 @@ const uniqid = require("uniqid");
 const chechAuth = require('../middleware/checkauth');
 
 router.get('/check', (req, res) => {
-    let body = req.body;
-    let email = body.email;
-    let code = body.code;
+    let data = req.body;
+    const email = data.email;
+    data.email = data.email.split(".").join("_");
+    let code = data.code;
     const mailOptions = {
         from: "postman.hack@techstax.co", // sender address
-        to: "pratheek.p.shetty@gmail.com",//monish2.basaniwal@gmail.com//address
+        to: email,//monish2.basaniwal@gmail.com//address
         subject: "", // Subject line
         html: "", // plain text body
     };
 
-    if(code === undefined){
-        mailOptions.subject = "Daily Digest included",
-        mailOptions.html = "<h2>Daily Digest</h2><p> Here is your Daily Digest to access dependancy tracker you must become a user.</p>";
-        admin.database().ref('/temp/' + email).once('value', function(snapshot){
-            if(snapshot.val ===null)
-            {
-                res.status(400).send({
-                    status: "user does not exist",
-                    error: "you aren't subscribed to the mailist, subscribe now with" + req.get('host')+'/api/news/subscribe'
-                });
-            }
-            else{
-                transporter.sendMail(mailOptions).then(() => {
-                    res.status(201).send({
-                        status: "email sent with daily digest",
-                        email: email
+   admin.database().ref(`/maillist/${data.email}/status`).once("value").then((snapshot) => {
+        if(snapshot.val()==="user"){
+            admin.database().ref(`/dependencies/${data.email}/${code}`).once("value").then((snapshot) => {
+                if(snapshot.val()===null){
+                    mailOptions.subject = "Daily Digest";
+                    mailOptions.html = `<h2>Daily Digest</h2><p>HIS DAILY DIGEST <br> Dependancies : 0 No dependencies Tracked</p>`; // add latest dependency updates
+                    transporter.sendMail(mailOptions).then(() => {
+                        res.status(201).send({
+                            status: "You are a subcriber!",
+                            email: email
+                        });
                     });
-                })
-            }
-        })
-        
+                }
+                else {
+                    let dependURL = [];
 
-    }
-    else{
-        if(admin.database().ref(`/users/${email}/code`).isEqual(code)){
-            admin.database().ref(`/users/${email}/dependancies`).once("value")
-                    .then(function(snapshot){
-                        if(snapshot.val()===null){
-                            mailOptions.subject = "Daily Digest Newsletter";
-                            mailOptions.html = "<h2>Daily Digest</h2><br><p>if you want to be able to track dependancies Add depednacies to your tracker. Dependacy information will be available in this exact mail</p>" //daiky digest template with no dependacy information
-                            transporter.sendMail(mailOptions).then(() =>{
-                                res.status(201).send({
-                                    status: "email sent without dependancy updates",
-                                    email: email
-                                });
-                            })
-                        }
-                        else{
-                            let dependURL = [];
-                            let dependObj = snapshot.exportVal();
-                            for (const key in dependObj) {
-                               dependURL.push(key);
-                            }
-                            mailOptions.subject = "Daily Digest ++ dependancy updates";
-                            mailOptions.html = `<h2>Daily Digest</h2><p>HIS DAILY DIGEST</p><h2>Dependancies</h2>`;
-                            transporter.sendMail(mailOptions).then(() =>{
-                                res.status(201).send({
-                                    status: "email sent with dependancy updates",
-                                    email: email
-                                });
-                            })
-                        }
+                    let dependObj = snapshot.exportVal();
+                    var dependNum = new Number;
+                    for (const key in dependObj) {
+                        dependNum = dependURL.push(key);
+                    }
+                    mailOptions.subject = "Daily Digest";
+                    mailOptions.html = `<h2>Daily Digest</h2><p>HIS DAILY DIGEST <br> Dependancies : ${dependNum} <br> ${dependObj}No dependencies Tracked</p>`; // add latest dependency updates
+                    transporter.sendMail(mailOptions).then(() => {
+                        res.status(201).send({
+                            status: "You are a subcriber!",
+                            email: email
+                        });
                     });
-
-        }
-        else{
-            res.status(406).send({
-                status: "not sent, re-enter code",
-                error: "incorrect code"
+                }
+                
             });
         }
-        
+        else{
+            mailOptions.to = databody.email;
+            mailOptions.subject= "Daily Digest";
+            mailOptions.html = `<h2>Daily Digest</h2><p> DAILY DIGEST <br>Daily digest and latest dependancy news every day at time: {integrate time}</p>`;
+            transporter.sendMail(mailOptions).then(function(){
+                            res.status(201).send({
+                                status: "Daily digest sent to mail",
+                                email: email
+                            });
+                        });
 
-    }
+        }
+   });
+
+
 
 });
 
-router.post('/subscribe', ( req, res) => {
+router.delete('/subscribe', chechAuth, (req,res) => {   
+        const data = req.body;
+        let email = data.email.split(".").join("_");
 
-    let email = req.body.email.split(".").join("_")
+        const mailOptions = {
+            from: "postman.hack@techstax.co", // sender address
+            to: data.email,//monish2.basaniwal@gmail.com//address
+            subject: "", // Subject line
+            html: "", // plain text body
+        };
+        try{
+            admin.database().ref(`/maillist/${email}`).set({}).then(() => {
+                mailOptions.subject = "Removed from maillist";
+                mailOptions.html = "<h2>We're sorry to see you GO!</h2><p> Unscribed from maillist </p>";
+                transporter.sendMail(mailOptions).then(() => {
+                    res.status(200).send({
+                        status: "unsubcribed",
+                        message: "sad to see you go"
+                    });
+                })
+            });
+        }
+        catch{
+            res.status(404).send({
+                status: "not removed",
+                error: "user doesn't exist in our maillist, Maybe Subscribe"
+            });
+
+        }
+
+})
+
+router.post('/subscribe', ( req, res) => {
+    const databody = req.body;
+
+    let email = req.body.email.split(".").join("_");
 
     const mailOptions = {
         from: "postman.hack@techstax.co", // sender address
-        to: "pratheek.p.shetty@gmail.com",//monish2.basaniwal@gmail.com//address
+        to: "",//monish2.basaniwal@gmail.com//address
         subject: "", // Subject line
         html: "", // plain text body
     };
 
-    try{
-    admin.database().ref(`/users/${email}/dependancies`).once("value")
-                    .then(function(snapshot){
-                        if(snapshot.val()===null){
-                            mailOptions.subject = "Daily Digest Newsletter";
-                            mailOptions.html = "<h2>Subscribed to Daily Digest</h2><br><p>if you want to be able to track dependancies Add depednacies to your tracker. Dependacy information will be available in this exact mail</p>" //daiky digest template with no dependacy information
-                            transporter.sendMail(mailOptions).then(() => {
-                                res.status(201).send({
-                                    status: "Subcribed! to Daily digest",
-                                    email: email
-                                });
-                            });
-                        }
-                        else{
-                            let dependURL = [];
-                            let dependObj = snapshot.exportVal();
-                            for (const key in dependObj) {
-                               dependURL.push(key);
-                            }
-                            mailOptions.subject = "Daily Digest ++ dependancy updates";
-                            mailOptions.html = `<h2>Daily Digest</h2><p>HIS DAILY DIGEST</p><h2>Dependancies</h2>`;
-                            transporter.sendMail(mailOptions).then(() => {
-                                res.status(201).send({
-                                    status: "subcribed to Maillist with dependancy updates",
-                                    email: email
-                                });
-                            })
-                        }
-                    });
-                }
-                catch{
-                    
-                    mailOptions.subject = "Subscribed to Mail list Daily Digest ",
-                    mailOptions.html = "<h2>Daily Digest</h2><p> You have been subscribed to the maillist but to access dependancy tracker you must become a user.</p>";
-                    transporter.sendMail(mailOptions).then((err,info) => {
-                        admin.database().ref(`/temp/`).push({email: email}).then(() => {
-                            res.status(200).send({
-                                status: "suscribed",
-                                user: "non user"
-                            });
-                        })
-                    })
 
-                }
+
+    admin.database().ref(`/users/${email}`).once("value")
+                    .then(function(snapshot) {
+                         if(snapshot.val()===null){
+                             admin.database().ref(`/maillist/${email}`).set({
+                                 email: email,
+                                 status: "non-user"
+                             });
+                        mailOptions.to = databody.email;
+                        mailOptions.subject= "Subscribed to Maillist";
+                        mailOptions.html = `<h2>Welcome to maillist</h2><p>you will have Daily digest and latest dependancy news every day at time: {integrate time}</p>`;
+                        transporter.sendMail(mailOptions).then(function(){
+                            res.status(201).send({
+                                status: "Subcribed! to Daily digest",
+                                email: email
+                            });
+                        });
+        }
+        else{
+                admin.database().ref(`/maillist/${email}`).set({
+                    email: email,
+                    status: "user"
+                });
+                admin.database().ref(`/dependencies/${email}`).once("value").then((data) => {
+                   if(data.val()===null){
+                       mailOptions.to = databody.email;
+                       mailOptions.subject = "Subscribed to Maillist";
+                       mailOptions.html= "<h2>Welcome to the mailist</h2><p>You will get daily digest without dependency updates because you haven't tracked any dependencies. add dependencies to your tracker to have it updated on your mailist</p>";
+                        transporter.sendMail(mailOptions).then(() => {
+                            res.status(201).send({
+                                status: "subcribed to Maillist without dependancy updates",
+                                email: email
+                            });
+                        });                       
+                   }
+                   else{
+                    let dependURL = [];
+
+                    let dependObj = data.exportVal();
+                    var dependNum = new Number;
+                    for (const key in dependObj) {
+                        dependNum = dependURL.push(key);
+                    }
+                    mailOptions.to = databody.email;
+                    mailOptions.subject = "Daily Digest ++ dependancy updates";
+                    mailOptions.html = `<h2>Daily Digest</h2><h2>Dependancies: ${dependNum}</h2><p>HIS DAILY DIGEST <br> Dependancies : ${dependObj}</p>`; // add latest dependency updates
+                    transporter.sendMail(mailOptions).then(() => {
+                        res.status(201).send({
+                            status: "subcribed to Maillist with dependancy updates",
+                            email: email
+                        });
+                    });
+                   }
+                });
+
+
+        }
+    });
+
+
     
 });
 
