@@ -9,7 +9,10 @@ module.exports = (req, res, next) => {
                 success: false,
                 error: "'email' parameter are required"
             });
-        } else { next(); }
+        } else {
+
+            next();
+        }
 
     }
     catch {

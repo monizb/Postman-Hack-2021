@@ -17,11 +17,19 @@ router.get("/", chechAuth, (req, res) => {
                 success: false,
                 error: "This user does not exist"
             })
-        } else if (snapshot.val().code === code) {
-            res.status(201).send({
-                success: true,
-                error: "This user exists",
-                reminders: []
+        } else if (snapshot.val().code === data.code) {
+            admin.database().ref("/reminders/" + data.email).once('value').then(function (snapshot) {
+                res.status(201).send({
+                    success: true,
+                    meggae: "",
+                    reminders: snapshot.val()
+                })
+            })
+
+        } else {
+            res.status(500).send({
+                success: false,
+                error: "'code' paramenter is missing or invalid"
             })
         }
     })
@@ -29,10 +37,11 @@ router.get("/", chechAuth, (req, res) => {
 
 router.post("/", chechAuth, (req, res) => {
     let data = req.body;
+    const email = data.email;
     data.email = data.email.split(".").join("_");
     const mailOptions = {
         from: "postman.hack@techstax.co", // sender address
-        to: "monish2.basaniwal@gmail.com",
+        to: "",
         subject: "", // Subject line
         html: "", // plain text body
     };
@@ -41,6 +50,7 @@ router.post("/", chechAuth, (req, res) => {
             let code = uniqid();
             mailOptions.subject = "Secret Code To Set Reminders"
             mailOptions.html = "<p>Hey,please use the below given code everytime this email id is used to set a reminder</p><br/><h2>" + code + "</h2>"
+            mailOptions.to = email;
             transporter.sendMail(mailOptions).then((err, info) => {
                 admin.database().ref(`users/${data.email}`).update({ code: code }).then(() => {
                     res.status(200).send({
@@ -84,10 +94,21 @@ router.post("/", chechAuth, (req, res) => {
                                 console.log("job started");
                                 mailOptions.subject = data.purpose === undefined ? "Alert: A reminder has been triggered" : "Alert: " + data.purpose + " reminder has been triggered"
                                 mailOptions.html = "<h2>Reminder!</h2>"
+                                mailOptions.to = email;
                                 transporter.sendMail(mailOptions).then((err, info) => {
+                                    admin.database().ref(`reminders/${data.email}/${job_id}`).update({
+                                        passed: true,
+                                    })
                                     console.log("done!");
                                 })
                             });
+                            admin.database().ref(`reminders/${data.email}/${job_id}`).set({
+                                job_id: job_id,
+                                date: date,
+                                time: time,
+                                passed: false,
+                                email: email
+                            })
                             res.status(200).send({
                                 success: true,
                                 message: "Reminder Set",

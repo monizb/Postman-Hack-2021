@@ -22,7 +22,7 @@ admin.initializeApp({
 
 const app = express();
 app.use(body.json());
-app.use(body.urlencoded({extended: false}));
+app.use(body.urlencoded({ extended: false }));
 
 /////////////////////////////////////////////
 
@@ -33,7 +33,7 @@ const PORT = process.env.PORT
 /////////////////////////////////////////////
 
 app.use("/api/timer", timerRouter);
-app.use("/api/depend", dependRoute);
+app.use("/api/dependency", dependRoute);
 app.use("/api/news", newsRoute);
 
 app.listen(PORT, () => { console.log(`Server listening on port: ${PORT}`) });
