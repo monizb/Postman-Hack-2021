@@ -11,6 +11,8 @@ const newsRoute = require("./routes/newsletter");
 const dependRoute = require("./routes/dependancy");
 const personRoute = require("./routes/persongenerator");
 const mailRollOut = require("./mailrollout");
+const vaultRoute = require("./routes/vault");
+const mailRollOut = require("./mailrollout");
 const { urlencoded } = require('body-parser');
 
 /////////////////////////////////////////////
@@ -38,6 +40,7 @@ app.use("/api/reminder", timerRouter);
 app.use("/api/dependency", dependRoute);
 app.use("/api/news", newsRoute);
 app.use("/api/generator", personRoute);
+app.use("/api/vault", vaultRoute);
 
 app.listen(PORT, () => { console.log(`Server listening on port: ${PORT}`) });
 
