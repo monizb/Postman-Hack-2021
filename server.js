@@ -30,7 +30,7 @@ app.use(body.urlencoded({ extended: false }));
 
 ///////////// Global Constants /////////////
 
-const PORT = process.env.PORT
+const PORT = process.env.PORT || 3000
 
 /////////////////////////////////////////////
 mailRollOut();
