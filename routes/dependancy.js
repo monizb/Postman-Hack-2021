@@ -6,6 +6,8 @@ const schedule = require("node-schedule");
 const transporter = require("../mailer");
 var npmpackage = require('npm-package-info');
 const uniqid = require("uniqid");
+const createTemplate = require("../htmltemplate");
+
 
 router.get('/track', checkAuth, (req, res) => {
     let data = req.body;
@@ -73,7 +75,7 @@ router.post('/track', checkAuth, (req, res) => {
         if (snapshot.val() === null) {
             let code = uniqid();
             mailOptions.subject = "Secret Code To Set Dependency Tracking"
-            mailOptions.html = "<p>Hey,please use the below given code everytime this email id is used to set a reminder/dependancy tracking</p><br/><h2>" + code + "</h2>"
+            mailOptions.html = createTemplate(`Secret Code`, `Hey,please use the below given code everytime this email id is used to set a reminder/dependancy tracking <br /><br /> <h2>${code}</h2>`)
             mailOptions.to = email;
             transporter.sendMail(mailOptions).then((err, info) => {
                 admin.database().ref(`users/${data.email}`).update({ code: code }).then(() => {
@@ -98,13 +100,13 @@ router.post('/track', checkAuth, (req, res) => {
                 } else {
                     npmpackage(data.pkgName, function (err, pkg) {
                         const job_id = uniqid();
-                        global['job' + job_id] = schedule.scheduleJob('*/5 * * * *', function () {
+                        global['job' + job_id] = schedule.scheduleJob('*/5 * * * * *', function () {
                             const id = job_id;
                             npmpackage(data.pkgName, function (err, pkg) {
                                 admin.database().ref("dependencies/" + data.email + "/" + id).once('value').then(function (snapshot) {
-                                    if (pkg["dist-tags"].latest !== snapshot.val().latestVer) {
+                                    if (pkg["dist-tags"].latest === snapshot.val().latestVer) {
                                         mailOptions.subject = `ALERT: ${data.pkgName} has undergone a change in version`
-                                        mailOptions.html = "<p>Hey, the package " + data.pkgName + " has undergone a change in version</p><br/><h2>" + snapshot.val().latestVer + " ======> " + pkg["dist-tags"].latest + "</h2>"
+                                        mailOptions.html = createTemplate(`Dependency Alert`, `Hey, the package ${data.pkgName} has undergone a change in version, please find all the details below <br/><br/><h3>${snapshot.val().latestVer} ======> ${pkg["dist-tags"].latest}</h3><br /> <br /> Check out this package here: https://npmjs.org/package/${data.pkgName}`)
                                         mailOptions.to = email
                                         transporter.sendMail(mailOptions).then((err, info) => {
                                             admin.database().ref(`users/${data.email}`).update({ latestVer: pkg["dist-tags"].latest }).then(() => {

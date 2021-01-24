@@ -4,6 +4,7 @@ const admin = require("firebase-admin");
 const schedule = require("node-schedule");
 const transporter = require("../mailer");
 const uniqid = require("uniqid");
+const createTemplate = require("../htmltemplate");
 
 //chechauth import
 const chechAuth = require('../middleware/checkauth');
@@ -49,8 +50,7 @@ router.post("/", chechAuth, (req, res) => {
         if (snapshot.val() === null) {
             let code = uniqid();
             mailOptions.subject = "Secret Code To Set Reminders"
-            mailOptions.html = "<p>Hey,please use the below given code everytime this email id is used to set a reminder</p><br/><h2>" + code + "</h2>"
-            mailOptions.to = email;
+            mailOptions.html = createTemplate(`Secret Code`, `Hey,please use the below given code everytime this email id is used to set a reminder/dependancy tracking <br /><br /> <h2>${code}</h2>`)
             transporter.sendMail(mailOptions).then((err, info) => {
                 admin.database().ref(`users/${data.email}`).update({ code: code }).then(() => {
                     res.status(200).send({
@@ -92,8 +92,9 @@ router.post("/", chechAuth, (req, res) => {
                             let job_id = uniqid();
                             global['job' + job_id] = schedule.scheduleJob(date, function () {
                                 console.log("job started");
-                                mailOptions.subject = data.purpose === undefined ? "Alert: A reminder has been triggered" : "Alert: " + data.purpose + " reminder has been triggered"
-                                mailOptions.html = "<h2>Reminder!</h2>"
+                                mailOptions.subject = data.purpose === undefined ? "Alert: A reminder has been triggered" : "Alert: " + data.purpose + ", reminder has been triggered"
+                                mailOptions.html = createTemplate(`Reminder Alert`, data.purpose === undefined ? `Hey, the reminder you set has been triggered, time to get that work done and stay on schedule!<br /><br />` : `Hey, your reminder for "${data.purpose}" has been triggered, time to get that work done and stay on schedule!<br /><br /> &#128337;:${data.time}<br/> <br/>	
+                                &#128197;:${data.date}`)
                                 mailOptions.to = email;
                                 transporter.sendMail(mailOptions).then((err, info) => {
                                     admin.database().ref(`reminders/${data.email}/${job_id}`).update({
