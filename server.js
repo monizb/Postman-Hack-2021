@@ -9,8 +9,13 @@ var serviceAccount = require("./firebase-admin-key.json");
 const timerRouter = require("./routes/timer.js");
 const newsRoute = require("./routes/newsletter");
 const dependRoute = require("./routes/dependancy");
+<<<<<<< Updated upstream
 const personRoute = require("./routes/persongenerator");
 const mailRollOut = require("./mailrollout");
+=======
+const vaultRoute = require("./routes/vault");
+const mailRollOut = require("./mailrollout"); 
+>>>>>>> Stashed changes
 const { urlencoded } = require('body-parser');
 
 /////////////////////////////////////////////
@@ -37,7 +42,11 @@ mailRollOut();
 app.use("/api/reminder", timerRouter);
 app.use("/api/dependency", dependRoute);
 app.use("/api/news", newsRoute);
+<<<<<<< Updated upstream
 app.use("/api/generator", personRoute);
+=======
+app.use("/api/vault", vaultRoute);
+>>>>>>> Stashed changes
 
 app.listen(PORT, () => { console.log(`Server listening on port: ${PORT}`) });
 
