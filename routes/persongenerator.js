@@ -24,7 +24,6 @@ router.get("/people/:gender/:qty", (req, res) => {
                 success: true,
                 people: people
             })
-            sendJSONFile(people);
         }
         if (gender === "female") {
             for (let i = 0; i < qty; i++) {

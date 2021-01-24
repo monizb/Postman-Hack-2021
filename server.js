@@ -12,7 +12,6 @@ const dependRoute = require("./routes/dependancy");
 const personRoute = require("./routes/persongenerator");
 const mailRollOut = require("./mailrollout");
 const vaultRoute = require("./routes/vault");
-const mailRollOut = require("./mailrollout");
 const { urlencoded } = require('body-parser');
 
 /////////////////////////////////////////////
