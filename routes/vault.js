@@ -8,6 +8,8 @@ const bcrypt = require('bcrypt');
 const crypto = require("crypto-js");
 const checkauth = require("../middleware/checkauth");
 
+
+
 router.get("/myvault", checkauth, (req, res) => {
     let data = req.body;
     let email = data.email;
@@ -48,19 +50,17 @@ router.get("/myvault", checkauth, (req, res) => {
                 admin.database().ref(`/vault/${data.email}/entryPass`).once("value").then((snapshot) => {
                     if (bcrypt.compareSync(password, snapshot.val())) {
                         try {
-                            let Data = {};
-                            admin.database().ref(`/vault/${data.email}/${vaultid}/Data`).once("value").then((snapshot) => {
+
+                            admin.database().ref(`/vault/${data.email}/${vaultid}/data`).once("value").then((snapshot) => {
                                 let EncryptedData = snapshot.val();
-                                let DecryptedData = {}
-                                for (const field in EncryptedData) {
-                                    //var decrypted = CryptoJS.AES.decrypt(EncryptedData[field],code);
-                                    DecryptedData[field] = EncryptedData[field];
-                                }
+
+                                var bytes = crypto.AES.decrypt(EncryptedData, code);
+                                var decryptedData = JSON.parse(bytes.toString(crypto.enc.Utf8));
                                 admin.database().ref(`/vault/${data.email}/${vaultid}/secret/`).once("value").then((snapshot) => {
                                     if (bcrypt.compareSync(code, snapshot.val())) {
                                         mailOptions.to = email;
                                         mailOptions.subject = "Vault Data Retrieved!";
-                                        mailOptions.html = `<h2>DATA:</h2><p>${JSON.stringify(DecryptedData) || JSON.stringify(EncryptedData)}</p>`;
+                                        mailOptions.html = `<h2>DATA:</h2><p>${JSON.stringify(decryptedData)}</p>`;
                                         transporter.sendMail(mailOptions).then(() => {
                                             res.status(201).send({
                                                 status: "Vault Data retrived",
@@ -160,20 +160,13 @@ router.post("/myvault", checkauth, (req, res) => {
                 admin.database().ref(`/vault/${data.email}/entryPass`).once("value").then((snapshot) => {
                     if (bcrypt.compareSync(password, snapshot.val())) {
                         try {
-                            let EncryptedData = {};
+                            let dataString = JSON.stringify(vaultData);
+                            var encrypted = crypto.AES.encrypt(dataString, code).toString();
 
-                            for (const field in vaultData) {
-
-                                /*var encrypted = CryptoJS.AES.encrypt(vaultData[field],code);
-                                console.log(CryptoJS.AES.decrypt(encrypted,code));
-                                EncryptedData[field] = encrypted;//bcrypt.hashSync(vaultData[field],10);*/
-                                EncryptedData[field] = vaultData[field];
-
-                            }
                             admin.database().ref(`/vault/${data.email}/${vaultid}/secret`).once("value").then((snapshot) => {
                                 if (bcrypt.compareSync(code, snapshot.val())) {
 
-                                    admin.database().ref(`vault/${data.email}/${vaultid}/`).update({ data: EncryptedData }).then(function () {
+                                    admin.database().ref(`vault/${data.email}/${vaultid}/`).update({ data: encrypted }).then(function () {
                                         mailOptions.subject = `Vault id ${vaultid} has Data!`;
                                         mailOptions.to = email;
                                         mailOptions.html = `<h2>You now have encrypted Data in your Vault<h2><p>If you want to retrieve your dataset go to (GET)localhost:9000/api/vault/myvault <br>Vault data now accessible to read and write</p>`;
@@ -326,6 +319,5 @@ router.post("/myvault/create", checkauth, (req, res, next) => {
     });
 });
 
+
 module.exports = router;
-
-

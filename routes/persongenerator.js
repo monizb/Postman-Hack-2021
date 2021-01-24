@@ -115,7 +115,7 @@ router.get("/lorem/:entity/:qty", (req, res) => {
     if (genderArray.indexOf(gender) === -1) {
         res.status(500).send({
             success: false,
-            error: "entity should be word, sentence or paragraph"
+            error: "entity should be word, sentence, or paragraph"
         })
     } else {
         if (gender === "word") {
