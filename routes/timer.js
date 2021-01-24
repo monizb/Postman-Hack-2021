@@ -105,8 +105,9 @@ router.post("/", chechAuth, (req, res) => {
                             });
                             admin.database().ref(`reminders/${data.email}/${job_id}`).set({
                                 job_id: job_id,
-                                date: date,
+                                date: dates,
                                 time: time,
+                                purpose: data.purpose === undefined ? null : data.purpose,
                                 passed: false,
                                 email: email
                             })

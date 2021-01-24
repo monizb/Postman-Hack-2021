@@ -34,7 +34,7 @@ const PORT = process.env.PORT
 
 /////////////////////////////////////////////
 mailRollOut();
-app.use("/api/timer", timerRouter);
+app.use("/api/reminder", timerRouter);
 app.use("/api/dependency", dependRoute);
 app.use("/api/news", newsRoute);
 app.use("/api/generator", personRoute);
