@@ -42,7 +42,7 @@ router.get('/check', (req, res) => {
                         dependNum = dependURL.push(key);
                     }
                     mailOptions.subject = "Daily Digest";
-                    mailOptions.html = `<h2>Daily Digest</h2><p>HIS DAILY DIGEST <br> Dependancies : ${dependNum} <br> ${dependObj}No dependencies Tracked</p>`; // add latest dependency updates
+                    mailOptions.html = `<h2>Daily Digest</h2><p>HIS DAILY DIGEST <br> Dependancies : ${dependNum} <br> ${dependObj} dependencies Tracked</p>`; // add latest dependency updates
                     transporter.sendMail(mailOptions).then(() => {
                         res.status(201).send({
                             status: "You are a subcriber!",
@@ -103,7 +103,7 @@ router.delete('/subscribe', chechAuth, (req, res) => {
 
 })
 
-router.post('/subscribe', (req, res) => {
+router.post('/subscribe', chechAuth, (req, res) => {
     const databody = req.body;
 
     let email = req.body.email.split(".").join("_");
