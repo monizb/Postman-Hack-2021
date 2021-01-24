@@ -50,14 +50,15 @@ router.get("/myvault", checkauth, (req,res) => {
                 admin.database().ref(`/vault/${data.email}/entryPass`).once("value").then((snapshot) => {
                     if(bcrypt.compareSync(password,snapshot.val())){
                         try{
-                            let Data = {};
+                            
                             admin.database().ref(`/vault/${data.email}/${vaultid}/Data`).once("value").then((snapshot) => {
                                 let EncryptedData = snapshot.val();
-                                let DecryptedData = {}
-                                for (const field in EncryptedData) {
+                                let decrypted = crypto.AES.decrypt(EncryptedData,email+code);
+                                let DecryptedData = JSON.parse(decrypted);
+                                /*for (const field in EncryptedData) {
                                    //var decrypted = CryptoJS.AES.decrypt(EncryptedData[field],code);
                                     DecryptedData[field] = EncryptedData[field];
-                                }
+                                }*/
                                 admin.database().ref(`/vault/${data.email}/${vaultid}/secret/`).once("value").then((snapshot) => {
                                     if(bcrypt.compareSync(code,snapshot.val())){
                                         mailOptions.to = email;
@@ -161,21 +162,31 @@ router.post("/myvault",checkauth, (req, res) =>{
             else{
                 admin.database().ref(`/vault/${data.email}/entryPass`).once("value").then((snapshot) => {
                     if(bcrypt.compareSync(password,snapshot.val())){
+                        console.log("i like myself");
                         try{
-                            let EncryptedData = {};
+                            let dataString = JSON.stringify(vaultData);
+                            console.log(dataString);
+                            var encrypted = crypto.AES.encrypt(dataString,email + code);
+                            var decrypted = crypto.AES.decrypt(encrypted,mail+code);
+                            console.log(decrypted);
+                            console.log(encrypted);
+                            let EncryptedData = encrypted.toString;
+                            let finalData = EncryptedData();
+                            console.log(finalData);
                             
-                            for (const field in vaultData) {
+                            
+                            /*for (const field in vaultData) {
 
                                 /*var encrypted = CryptoJS.AES.encrypt(vaultData[field],code);
                                 console.log(CryptoJS.AES.decrypt(encrypted,code));
-                                EncryptedData[field] = encrypted;//bcrypt.hashSync(vaultData[field],10);*/
+                                EncryptedData[field] = encrypted;//bcrypt.hashSync(vaultData[field],10);
                                 EncryptedData[field] = vaultData[field];         
                                 
-                            }
+                            }*/
                             admin.database().ref(`/vault/${data.email}/${vaultid}/secret`).once("value").then((snapshot) => {
                                 if(bcrypt.compareSync(code,snapshot.val())){
                                     
-                                    admin.database().ref(`vault/${data.email}/${vaultid}/`).update({data : EncryptedData}).then(function(){
+                                    admin.database().ref(`vault/${data.email}/${vaultid}/`).update({data : finalData}).then(function(){
                                         mailOptions.subject = `Vault id ${vaultid} has Data!`;
                                         mailOptions.to = email;
                                         mailOptions.html = `<h2>You now have encrypted Data in your Vault<h2><p>If you want to retrieve your dataset go to (GET)localhost:9000/api/vault/myvault <br>Vault data now accessible to read and write</p>`;
