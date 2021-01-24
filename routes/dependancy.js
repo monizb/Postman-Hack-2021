@@ -104,7 +104,7 @@ router.post('/track', checkAuth, (req, res) => {
                             const id = job_id;
                             npmpackage(data.pkgName, function (err, pkg) {
                                 admin.database().ref("dependencies/" + data.email + "/" + id).once('value').then(function (snapshot) {
-                                    if (pkg["dist-tags"].latest === snapshot.val().latestVer) {
+                                    if (pkg["dist-tags"].latest !== snapshot.val().latestVer) {
                                         mailOptions.subject = `ALERT: ${data.pkgName} has undergone a change in version`
                                         mailOptions.html = createTemplate(`Dependency Alert`, `Hey, the package ${data.pkgName} has undergone a change in version, please find all the details below <br/><br/><h3>${snapshot.val().latestVer} ======> ${pkg["dist-tags"].latest}</h3><br /> <br /> Check out this package here: https://npmjs.org/package/${data.pkgName}`)
                                         mailOptions.to = email
