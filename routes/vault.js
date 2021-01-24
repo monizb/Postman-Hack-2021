@@ -321,5 +321,3 @@ router.post("/myvault/create", checkauth, (req, res, next) => {
 
 
 module.exports = router;
-
-
