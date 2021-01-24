@@ -10,6 +10,7 @@ const timerRouter = require("./routes/timer.js");
 const newsRoute = require("./routes/newsletter");
 const dependRoute = require("./routes/dependancy");
 const personRoute = require("./routes/persongenerator");
+const mailRollOut = require("./mailrollout");
 const { urlencoded } = require('body-parser');
 
 /////////////////////////////////////////////
@@ -32,7 +33,7 @@ app.use(body.urlencoded({ extended: false }));
 const PORT = process.env.PORT
 
 /////////////////////////////////////////////
-
+mailRollOut();
 app.use("/api/timer", timerRouter);
 app.use("/api/dependency", dependRoute);
 app.use("/api/news", newsRoute);
