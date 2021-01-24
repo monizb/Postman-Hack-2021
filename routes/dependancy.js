@@ -100,7 +100,7 @@ router.post('/track', checkAuth, (req, res) => {
                 } else {
                     npmpackage(data.pkgName, function (err, pkg) {
                         const job_id = uniqid();
-                        global['job' + job_id] = schedule.scheduleJob('*/5 * * * * *', function () {
+                        global['job' + job_id] = schedule.scheduleJob('*/5 * * * *', function () {
                             const id = job_id;
                             npmpackage(data.pkgName, function (err, pkg) {
                                 admin.database().ref("dependencies/" + data.email + "/" + id).once('value').then(function (snapshot) {
