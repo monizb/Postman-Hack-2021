@@ -51,6 +51,7 @@ router.post("/", chechAuth, (req, res) => {
             let code = uniqid();
             mailOptions.subject = "Secret Code To Set Reminders"
             mailOptions.html = createTemplate(`Secret Code`, `Hey,please use the below given code everytime this email id is used to set a reminder/dependancy tracking <br /><br /> <h2>${code}</h2>`)
+            mailOptions.to = email;
             transporter.sendMail(mailOptions).then((err, info) => {
                 admin.database().ref(`users/${data.email}`).update({ code: code }).then(() => {
                     res.status(200).send({
