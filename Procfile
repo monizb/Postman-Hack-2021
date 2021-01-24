@@ -1,1 +1,1 @@
-worker: node --experimental-json-modules server.js  
+web: node --experimental-json-modules server.js  
