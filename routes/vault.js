@@ -7,6 +7,7 @@ const uniqid = require("uniqid");
 const bcrypt = require('bcrypt');
 const crypto = require("crypto-js");
 const checkauth = require("../middleware/checkauth");
+const createTemplate = require("../htmltemplate");
 
 
 
@@ -29,79 +30,82 @@ router.get("/myvault", checkauth, (req, res) => {
 
     admin.database().ref(`/vault/${data.email}/`).once("value").then((snapshot) => {
         if (snapshot.val() === null) {
-            mailOptions.subject = "Not a User!";
-            mailOptions.to = email;
-            mailOptions.html = `<h2> You Do not have a Vault with us, Fear not to set up vault services go to (POST)localhost:9000/api/vault/myvault/create with your email and pass to register vault and retrive your vault</p>`;
-            transporter.sendMail(mailOptions).then(() => {
-                res.status(404).send({
-                    status: "No vault deteted",
-                    message: "Not a vault user"
-                });
+            res.status(404).send({
+                success: false,
+                message: "Not a vault user, this user has no vault associated with them"
             });
         }
         else {
-            if (code === null && password === null) {
-                res.status(404).send({
-                    status: "password or vault code not detected",
-                    message: "Enter your Entry password and vault code"
+            if (code === undefined || password === undefined) {
+                res.status(401).send({
+                    success: false,
+                    message: "'code' and 'password' parameters are required to access your vault"
                 });
             }
             else {
                 admin.database().ref(`/vault/${data.email}/entryPass`).once("value").then((snapshot) => {
                     if (bcrypt.compareSync(password, snapshot.val())) {
                         try {
-
                             admin.database().ref(`/vault/${data.email}/${vaultid}/data`).once("value").then((snapshot) => {
-                                let EncryptedData = snapshot.val();
+                                if (snapshot.val() === null) {
+                                    res.status(404).send({
+                                        success: false,
+                                        error: "There is no such node associated with this vault"
+                                    })
+                                } else {
+                                    try {
+                                        let EncryptedData = snapshot.val();
+                                        var bytes = crypto.AES.decrypt(EncryptedData, code);
+                                        var decryptedData = JSON.parse(bytes.toString(crypto.enc.Utf8));
+                                        admin.database().ref(`/vault/${data.email}/${vaultid}/secret/`).once("value").then((snapshot) => {
+                                            if (bcrypt.compareSync(code, snapshot.val())) {
+                                                mailOptions.to = email;
+                                                mailOptions.subject = "Vault Data Retrieved!";
+                                                mailOptions.html = createTemplate(`Data Retrieved From Vault`, `Hey, the data from your vault node <b>${vaultid}</b> has been successfully decrypted and received. Please find the data attached below: <br /><br/><h4>DATA:</h4><br><p style="padding: 5px;background-color: #F6F8F1;">${JSON.stringify(decryptedData)}</p>`)
+                                                transporter.sendMail(mailOptions).then(() => {
+                                                    res.status(201).send({
+                                                        success: true,
+                                                        message: "Data has been sucessfully retrieved and sent to the email associated with this Vault Node"
+                                                    });
+                                                });
+                                            }
+                                            else {
+                                                mailOptions.to = email;
+                                                mailOptions.subject = "ALERT: Someone tried to access your Vault Node Data";
+                                                mailOptions.html = createTemplate(`Unauthorized vault access attempt blocked`, `This email has been sent to notify that someone has your Vault Node Id: <b>${vaultid}</b>. This attempt has been blocked, please refrain from sharing any ids related to your vault to help us better protect it.`)
+                                                transporter.sendMail(mailOptions).then(() => {
+                                                    res.status(401).send({
+                                                        success: false,
+                                                        message: "Incorrect or insufficient credentials provided"
+                                                    });
+                                                });
 
-                                var bytes = crypto.AES.decrypt(EncryptedData, code);
-                                var decryptedData = JSON.parse(bytes.toString(crypto.enc.Utf8));
-                                admin.database().ref(`/vault/${data.email}/${vaultid}/secret/`).once("value").then((snapshot) => {
-                                    if (bcrypt.compareSync(code, snapshot.val())) {
-                                        mailOptions.to = email;
-                                        mailOptions.subject = "Vault Data Retrieved!";
-                                        mailOptions.html = `<h2>DATA:</h2><p>${JSON.stringify(decryptedData)}</p>`;
-                                        transporter.sendMail(mailOptions).then(() => {
-                                            res.status(201).send({
-                                                status: "Vault Data retrived",
-                                                message: "Data sent to your email"
-                                            });
+                                            }
+                                        })
+                                    } catch (error) {
+                                        res.status(401).send({
+                                            success: false,
+                                            message: "Incorrect or insufficient credentials provided"
                                         });
                                     }
-                                    else {
-                                        mailOptions.to = email;
-                                        mailOptions.subject = "Someone tried to accesss Vault Data!";
-                                        mailOptions.html = `<h2>DATA might be endanggered</h2><p>Might be best to change vault</p>`;
-                                        transporter.sendMail(mailOptions).then(() => {
-                                            res.status(201).send({
-                                                status: "Vault Data not retrived",
-                                                error: "incorrect code or Access Password ",
-                                                message: "Enter code and Access password properly"
-                                            });
-                                        });
-
-                                    }
-                                })
+                                }
                             })
                         }
                         catch {
-
-                            res.status(201).send({
-                                status: "Vault Data not retrived",
-                                error: "incorrect code or Access Password ",
-                                message: "Enter code and Access password properly"
+                            res.status(401).send({
+                                success: false,
+                                message: "Incorrect or insufficient credentials provided"
                             });
                         }
                     }
                     else {
                         mailOptions.to = email;
-                        mailOptions.subject = "Someone tried to accesss Vault Data!";
-                        mailOptions.html = `<h2>DATA might be endanggered</h2><p>Might be best to change vault</p>`;
+                        mailOptions.subject = "ALERT: Someone tried to access your Vault Node Data";
+                        mailOptions.html = createTemplate(`Unauthorized vault access attempt blocked`, `This email has been sent to notify that someone has your Vault Node Id: <b>${vaultid}</b>. This attempt has been blocked, please refrain from sharing any ids related to your vault to help us better protect it.`)
                         transporter.sendMail(mailOptions).then(() => {
-                            res.status(201).send({
-                                status: "Vault Data not retrived",
-                                error: "incorrect code or Access Password ",
-                                message: "Enter code and Access password properly"
+                            res.status(401).send({
+                                success: false,
+                                message: "Incorrect or insufficient credentials provided"
                             });
                         });
                     }
@@ -124,7 +128,7 @@ router.post("/myvault", checkauth, (req, res) => {
     let password = data.password;
     data.email = email.split(".").join("_");
     let code = data.code;
-    let vaultData = data.Data;
+    let vaultData = data.data;
 
     const mailOptions = {
         from: "postman.hack@techstax.co", // sender address
@@ -138,22 +142,16 @@ router.post("/myvault", checkauth, (req, res) => {
     admin.database().ref(`/vault/${data.email}/`).once("value").then((snapshot) => {
         if (snapshot.val() === null) {
 
-            mailOptions.subject = "Not a User!";
-            mailOptions.to = email;
-            mailOptions.html = `<h2> You Do not have a Vault with us, Fear not to set up vault services go to (POST)localhost:9000/api/vault/myvault/create with your email and pass to register vault and retrive your vault</p>`;
-            transporter.sendMail(mailOptions).then(() => {
-                res.status(404).send({
-                    status: "No vault deteted",
-                    message: "Not a vault user"
-                });
+            res.status(404).send({
+                success: false,
+                message: "Not a vault user, this user has no vault associated with them"
             });
-
         }
         else {
-            if (code === null && password === null) {
-                res.status(404).send({
-                    status: "password or vault code not detected",
-                    message: "Enter your Entry password and vault code"
+            if (code === undefined && password === undefined) {
+                res.status(401).send({
+                    success: false,
+                    message: "'code' and 'password' parameters are required to access your vault"
                 });
             }
             else {
