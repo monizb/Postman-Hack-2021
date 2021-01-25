@@ -141,17 +141,16 @@ router.post("/myvault", checkauth, (req, res) => {
 
     admin.database().ref(`/vault/${data.email}/`).once("value").then((snapshot) => {
         if (snapshot.val() === null) {
-
             res.status(404).send({
                 success: false,
                 message: "Not a vault user, this user has no vault associated with them"
             });
         }
         else {
-            if (code === undefined && password === undefined) {
+            if (code === undefined || password === undefined || vaultid === undefined || vaultData === undefined) {
                 res.status(401).send({
                     success: false,
-                    message: "'code' and 'password' parameters are required to access your vault"
+                    message: "'code', 'vaultid', 'data' and 'password' parameters are required to access your vault and insert data"
                 });
             }
             else {
@@ -163,50 +162,41 @@ router.post("/myvault", checkauth, (req, res) => {
 
                             admin.database().ref(`/vault/${data.email}/${vaultid}/secret`).once("value").then((snapshot) => {
                                 if (bcrypt.compareSync(code, snapshot.val())) {
-
                                     admin.database().ref(`vault/${data.email}/${vaultid}/`).update({ data: encrypted }).then(function () {
-                                        mailOptions.subject = `Vault id ${vaultid} has Data!`;
-                                        mailOptions.to = email;
-                                        mailOptions.html = `<h2>You now have encrypted Data in your Vault<h2><p>If you want to retrieve your dataset go to (GET)localhost:9000/api/vault/myvault <br>Vault data now accessible to read and write</p>`;
-                                        transporter.sendMail(mailOptions).then(() => {
-                                            res.status(201).send({
-                                                status: "vault data Inserted, vault data now accessible to read",
-                                                message: "Do not forget your code and vaultID, Thank you for securing your data with us"
-                                            });
+                                        res.status(201).send({
+                                            success: true,
+                                            message: "Vault Data Inserted, data now available to be read, do not forget/misplace your code and password since it cannot be retrieved again"
                                         });
                                     });
                                 }
                                 else {
                                     mailOptions.to = email;
-                                    mailOptions.subject = "New VAULT Access Attempt detected!",
-                                        mailOptions.html = `<h2>Someone tried to access your vault with your email<h2><p>you already have an existing base in our system...to make a new vault or access your vaults go to (POST)localhost:9000/api/vault/myvault and (GET)loaclhost:9000/api/vault/myvault RESPT<p><br>`;
+                                    mailOptions.subject = "ALERT: Someone tried to access your Vault Node Data";
+                                    mailOptions.html = createTemplate(`Unauthorized vault access attempt blocked`, `This email has been sent to notify that someone has your Vault Node Id: <b>${vaultid}</b>. This attempt has been blocked, please refrain from sharing any ids related to your vault to help us better protect it.`)
                                     transporter.sendMail(mailOptions).then(() => {
-                                        res.status(404).send({
-                                            status: "Vault not accessed",
-                                            error: "Access password or vault code incorrect",
-                                            message: "Enter the correct Access Password or Vault code correctly"
+                                        res.status(401).send({
+                                            success: false,
+                                            message: "Incorrect or insufficient credentials provided"
                                         });
-                                    })
+                                    });
                                 }
                             })
                         }
                         catch {
-                            res.status(404).send({
-                                status: "Vault not accessed",
-                                error: "Access password or vault code incorrect",
-                                message: "Enter the correct Access Password or Vault code correctly"
+                            res.status(401).send({
+                                success: false,
+                                message: "Incorrect or insufficient credentials provided"
                             });
                         }
                     }
                     else {
                         mailOptions.to = email;
-                        mailOptions.subject = "New VAULT Access Attempt detected!",
-                            mailOptions.html = `<h2>Someone tried to access your vault with your email<h2><p>you already have an existing base in our system...to make a new vault or access your vaults go to (POST)localhost:9000/api/vault/myvault and (GET)loaclhost:9000/api/vault/myvault RESPT<p><br>`;
+                        mailOptions.subject = "ALERT: Someone tried to access your Vault Node Data";
+                        mailOptions.html = createTemplate(`Unauthorized vault access attempt blocked`, `This email has been sent to notify that someone has your Vault Node Id: <b>${vaultid}</b>. This attempt has been blocked, please refrain from sharing any ids related to your vault to help us better protect it.`)
                         transporter.sendMail(mailOptions).then(() => {
-                            res.status(404).send({
-                                status: "Vault not accessed",
-                                error: "Access password or vault code incorrect",
-                                message: "Enter the correct Access Password or Vault code correctly"
+                            res.status(401).send({
+                                success: false,
+                                message: "Incorrect or insufficient credentials provided"
                             });
                         });
 
@@ -232,89 +222,216 @@ router.post("/myvault/create", checkauth, (req, res, next) => {
         html: "", // plain text body
     };
 
-
-
-    admin.database().ref(`/vault/${data.email}/`).once("value").then((snapshot) => {
-        if (snapshot.val() === null) {
-
-            if (code === null && password === null) {
-                res.status(409).send({
-                    status: "password or vault code not detected",
-                    message: "Enter your Entry password and vault code"
-                });
-            }
-            else {
+    if (code === undefined || password === undefined) {
+        res.status(404).send({
+            success: false,
+            message: "'code' and 'password' parameters are required"
+        });
+    } else {
+        admin.database().ref(`/vault/${data.email}/`).once("value").then((snapshot) => {
+            if (snapshot.val() === null) {
                 let vaultid = uniqid();
                 let mainPass = bcrypt.hashSync(password, 10);
                 let safepass = bcrypt.hashSync(code, 10);
                 console.log(safepass);
                 admin.database().ref(`/vault/${data.email}/`).set({ entryPass: mainPass }).then(() => {
-                    mailOptions.subject = "Vaultid: Do not share!";
-                    mailOptions.to = email;
-                    mailOptions.html = "<h2>Entry password added to the database<h2>";
-                    transporter.sendMail(mailOptions);
                 });
                 admin.database().ref(`/vault/${data.email}/${vaultid}`).set({ secret: safepass, data: null }).then(() => {
                     mailOptions.subject = "Vaultid: Do not share!";
                     mailOptions.to = email;
-                    mailOptions.html = `<h2> Do not share, This is your vault id<h2><p><h2>${vaultid}<h2><br>Vault data now accessible to read and write</p>`;
+                    mailOptions.html = createTemplate(`Vault Created`, `Hey, this is to inform you that your vault has been sucessfully created, find the cault code below. DO NOT ever share your vault ID or any other credentials with anyone.<br /><br /> <h2>${vaultid}</h2>`)
                     transporter.sendMail(mailOptions).then(() => {
                         res.status(201).send({
-                            status: "vault created, vault id sent to your mail, vault data now accessible to read/write",
-                            message: "Do not forget your code and vaultID"
+                            success: true,
+                            message: "Vault created, Vault ID sent to your mail, Vault data now accessible to read/write"
                         });
                     });
                 }).catch((err) => {
-                    res.status(409).send({
-                        status: "Vault not created",
-                        error: err,
-                        message: "Send req again with your email and new password to create a new vault"
+                    res.status(500).send({
+                        success: false,
+                        message: "Exception Occurred, Pease retry your request"
                     });
                 });
-
             }
-
-
-
-
-
-        }
-        else {
-
-            admin.database().ref(`/vault/${data.email}/entryPass/`).once("value").then((snapshot) => {
-                if (bcrypt.compareSync(password, snapshot.val())) {
-                    let vaultid = uniqid();
-                    let safepass = bcrypt.hashSync(code, 10);
-                    admin.database().ref(`/vault/${data.email}/${vaultid}/`).set({ secret: safepass, data: null }).then(() => {
-                        mailOptions.subject = "Vaultid: Do not share!";
+            else {
+                admin.database().ref(`/vault/${data.email}/entryPass/`).once("value").then((snapshot) => {
+                    if (bcrypt.compareSync(password, snapshot.val())) {
+                        let vaultid = uniqid();
+                        let safepass = bcrypt.hashSync(code, 10);
+                        admin.database().ref(`/vault/${data.email}/${vaultid}/`).set({ secret: safepass, data: null }).then(() => {
+                            mailOptions.subject = "Vaultid: Do not share!";
+                            mailOptions.to = email;
+                            mailOptions.html = createTemplate(`Vault Created`, `Hey, this is to inform you that your vault has been sucessfully created, find the Vault ID below. DO NOT ever share your vault ID or any other credentials with anyone.<br /><br /> <h2>${vaultid}</h2>`)
+                            transporter.sendMail(mailOptions).then(() => {
+                                res.status(201).send({
+                                    success: true,
+                                    message: "Vault created, Vault ID sent to your mail, Vault data now accessible to read/write"
+                                });
+                            });
+                        })
+                    }
+                    else {
                         mailOptions.to = email;
-                        mailOptions.html = `<h2> Do not share, This is your vault id<h2><p><h2>${vaultid}<h2><br>new Vault created ,Vault data now accessible to read and write</p>`;
+                        mailOptions.subject = "ALERT: Vault Creation Detected",
+                            mailOptions.html = createTemplate(`Vault Creation Attempt Blocked`, `Hey, this is to notify you that someone tried to create a vault inside your node using your email address. We have successfully blocked this attempt.`)
                         transporter.sendMail(mailOptions).then(() => {
-                            res.status(201).send({
-                                status: "vault created, vault id sent to your mail, new Vault created ,vault data now accessible to read/write",
-                                message: "Do not forget your code and vaultID"
+                            res.status(401).send({
+                                success: false,
+                                message: "Incorrect or insufficient credentials provided"
                             });
                         });
-                    })
-                }
-                else {
-                    mailOptions.to = email;
-                    mailOptions.subject = "New VAULT Creation detected!",
-                        mailOptions.html = `<h2>Some tried to make a new vault with your email<h2><p>you already have an existing base in our system...to make a new vault or access your vaults go to (POST)localhost:9000/api/vault/myvault and (GET)loaclhost:9000/api/vault/myvault RESPT<p><br>`;
-                    transporter.sendMail(mailOptions).then(() => {
-                        res.status(404).send({
-                            status: "Vault not created",
-                            error: "User already present",
-                            message: "you might already have a vault present go to localhost:9000/api/vault/myvault to see your vault, if not use a different email"
-                        });
+                    }
+                })
+
+
+
+            }
+        });
+    }
+});
+
+router.delete("/myvault/delete", checkauth, (req, res) => {
+    let data = req.body;
+    let email = data.email;
+    let password = data.password;
+    let code = data.code;
+    let vaultid = data.vaultid;
+    let userOpt = data.option;
+    data.email = email.split(".").join("_");
+
+    const mailOptions = {
+        from: "postman.hack@techstax.co", // sender address
+        to: "",
+        subject: "", // Subject line
+        html: "", // plain text body
+    };
+
+    if (password === undefined || code === undefined) {
+        res.status(404).send({
+            success: false,
+            message: "'code' and 'password' parameters are required"
+        });
+    } else {
+        admin.database().ref(`/vault/${data.email}/`).once("value").then((snapshot) => {
+            if (snapshot.val() === null) {
+                res.status(404).send({
+                    success: false,
+                    message: "User is not a vault user, No vault asscoiated with them, to attain a vault, create a vault"
+                });
+            }
+            else {
+                switch (userOpt) {
+                    case "node":
+                        try {
+                            admin.database().ref(`/vault/${data.email}/entryPass/`).once("value").then((snapshot) => {
+                                if (bcrypt.compareSync(password, snapshot.val())) {
+                                    admin.database().ref(`/vault/${data.email}/`).remove().then(() => {
+                                        mailOptions.to = email;
+                                        mailOptions.subject = "Vault Node REMOVED";
+                                        mailOptions.html = createTemplate("You have succesfully deleted your Vault Node", "We're sorry to see you go, All vaults in your node has been destroyed, We hope to see you again.");
+                                        transporter.sendMail(mailOptions).then(() => {
+                                            res.status(202).send({
+                                                success: true,
+                                                message: "Vault Node has been deleted along with every vault present within it"
+                                            });
+                                        });
+                                    })
+                                }
+                                else {
+                                    mailOptions.to = email;
+                                    mailOptions.subject = "Vault Node Deletion Attempt BLOCKED!";
+                                    mailOptions.html = createTemplate("Deletion of Vault NODE BLOCKED", "Authentication failed so we bloacked the deletion attempt, Never share your vault details with anyone");
+                                    transporter.sendMail(mailOptions).then(() => {
+                                        res.status(401).send({
+                                            success: false,
+                                            message: "Vault Node deletion BLOCKED, Authentication Failed"
+                                        });
+                                    });
+
+                                }
+                            });
+                        }
+                        catch {
+                            res.status(401).send({
+                                success: failed,
+                                message: "Vault Node deletion BLOCKED, Authentication Failed"
+                            });
+
+                        }
+
+                        break;
+                    case "vault": try {
+                        if (vaultid === undefined) {
+                            res.status(404).send({
+                                success: false,
+                                message: "'vaultid' parameter is required"
+                            });
+                        } else {
+                            admin.database().ref(`/vault/${data.email}/entryPass/`).once("value").then((snapshot) => {
+                                if (bcrypt.compareSync(password, snapshot.val())) {
+                                    admin.database().ref(`/vault/${data.email}/${vaultid}/secret`).once("value").then((snapshot) => {
+                                        if (bcrypt.compareSync(code, snapshot.val())) {
+                                            admin.database().ref(`/vault/${data.email}/${vaultid}/`).remove().then(() => {
+                                                mailOptions.to = email;
+                                                mailOptions.subject = `Vault ${vaultid} REMOVED`;
+                                                mailOptions.html = createTemplate(`You have succesfully deleted Vault ${vaultid}`, "We're sorry to see you go, All data in your vault has been destroyed, We hope to see you again.");
+                                                transporter.sendMail(mailOptions).then(() => {
+                                                    res.status(202).send({
+                                                        success: true,
+                                                        message: "Vault has been successfully deleted and all data has been erased"
+                                                    });
+                                                });
+                                            });
+                                        }
+                                        else {
+                                            mailOptions.to = email;
+                                            mailOptions.subject = "Vault Deletion Attempt BLOCKED!";
+                                            mailOptions.html = createTemplate("Deletion of Vault BLOCKED", "Authentication failed so we blocked the deletion attempt, Never share your vault details with anyone");
+                                            transporter.sendMail(mailOptions).then(() => {
+                                                res.status(401).send({
+                                                    success: "failed",
+                                                    message: "Vault deletion BLOCKED, Authentication Failed"
+                                                });
+                                            });
+                                        }
+                                    })
+
+
+                                }
+                                else {
+                                    mailOptions.to = email;
+                                    mailOptions.subject = "Vault Deletion Attempt BLOCKED!";
+                                    mailOptions.html = createTemplate("Deletion of Vault BLOCKED", "Authentication failed so we bloacked the deletion attempt, Never share your vault details with anyone");
+                                    transporter.sendMail(mailOptions).then(() => {
+                                        res.status(401).send({
+                                            success: false,
+                                            message: "Vault deletion BLOCKED, Authentication Failed"
+                                        });
+                                    });
+                                }
+                            })
+                        }
+
+                    }
+                        catch {
+                            res.status(401).send({
+                                success: false,
+                                message: "Vault deletion BLOCKED, Authentication Failed"
+                            });
+
+
+                        }
+                        break;
+
+                    default: res.status(404).send({
+                        success: false,
+                        message: "Deletion 'option' parameter required, Either (vault) for singular vault or (node) for Vault Node"
                     });
                 }
-            })
 
-
-
-        }
-    });
+            }
+        })
+    }
 });
 
 
