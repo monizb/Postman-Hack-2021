@@ -370,30 +370,38 @@ router.delete("/myvault/delete", checkauth, (req, res) => {
                             admin.database().ref(`/vault/${data.email}/entryPass/`).once("value").then((snapshot) => {
                                 if (bcrypt.compareSync(password, snapshot.val())) {
                                     admin.database().ref(`/vault/${data.email}/${vaultid}/secret`).once("value").then((snapshot) => {
-                                        if (bcrypt.compareSync(code, snapshot.val())) {
-                                            admin.database().ref(`/vault/${data.email}/${vaultid}/`).remove().then(() => {
-                                                mailOptions.to = email;
-                                                mailOptions.subject = `Vault ${vaultid} REMOVED`;
-                                                mailOptions.html = createTemplate(`You have succesfully deleted Vault ${vaultid}`, "We're sorry to see you go, All data in your vault has been destroyed, We hope to see you again.");
-                                                transporter.sendMail(mailOptions).then(() => {
-                                                    res.status(202).send({
-                                                        success: true,
-                                                        message: "Vault has been successfully deleted and all data has been erased"
+                                        if (snapshot.val() === null) {
+                                            res.status(404).send({
+                                                success: false,
+                                                error: "This vault does not exist within this node"
+                                            })
+                                        } else {
+                                            if (bcrypt.compareSync(code, snapshot.val())) {
+                                                admin.database().ref(`/vault/${data.email}/${vaultid}/`).remove().then(() => {
+                                                    mailOptions.to = email;
+                                                    mailOptions.subject = `Vault ${vaultid} REMOVED`;
+                                                    mailOptions.html = createTemplate(`You have succesfully deleted Vault ${vaultid}`, "We're sorry to see you go, All data in your vault has been destroyed, We hope to see you again.");
+                                                    transporter.sendMail(mailOptions).then(() => {
+                                                        res.status(202).send({
+                                                            success: true,
+                                                            message: "Vault has been successfully deleted and all data has been erased"
+                                                        });
                                                     });
                                                 });
-                                            });
-                                        }
-                                        else {
-                                            mailOptions.to = email;
-                                            mailOptions.subject = "Vault Deletion Attempt BLOCKED!";
-                                            mailOptions.html = createTemplate("Deletion of Vault BLOCKED", "Authentication failed so we blocked the deletion attempt, Never share your vault details with anyone");
-                                            transporter.sendMail(mailOptions).then(() => {
-                                                res.status(401).send({
-                                                    success: "failed",
-                                                    message: "Vault deletion BLOCKED, Authentication Failed"
+                                            }
+                                            else {
+                                                mailOptions.to = email;
+                                                mailOptions.subject = "Vault Deletion Attempt BLOCKED!";
+                                                mailOptions.html = createTemplate("Deletion of Vault BLOCKED", "Authentication failed so we blocked the deletion attempt, Never share your vault details with anyone");
+                                                transporter.sendMail(mailOptions).then(() => {
+                                                    res.status(401).send({
+                                                        success: "failed",
+                                                        message: "Vault deletion BLOCKED, Authentication Failed"
+                                                    });
                                                 });
-                                            });
+                                            }
                                         }
+
                                     })
 
 
